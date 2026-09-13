@@ -1134,6 +1134,21 @@ def compute_issues():
 def compute_score():
     checklist = active_checklist()
     mandatory = mandatory_items()
+    docs = list(st.session_state.documents.values())
+
+    # No uploaded documents means the application has not started its
+    # evidence/review stage yet, so every readiness component stays at zero.
+    # This prevents profile completion or an empty issue list from creating a
+    # non-zero readiness score before any supporting document is uploaded.
+    if not docs:
+        issues = compute_issues()
+        components = {
+            "Mandatory Requirements": 0,
+            "Confirmed Document Review": 0,
+            "Consistency": 0,
+            "Applicant Profile": 0,
+        }
+        return 0, components, issues
 
     # Mandatory requirements completion
     if mandatory:
@@ -1143,15 +1158,14 @@ def compute_score():
         mandatory_completion = 0.0
 
     # Confirmed extraction
-    docs = list(st.session_state.documents.values())
-    confirmed_extraction = (sum(1 for d in docs if d.get("confirmed")) / len(docs)) if docs else 0.0
+    confirmed_extraction = sum(1 for d in docs if d.get("confirmed")) / len(docs)
 
-    # Consistency: 1 minus proportion of inconsistency-type issues among confirmed docs
+    # Consistency is meaningful only after at least one document is uploaded.
     issues = compute_issues()
     inconsistency_issues = [i for i in issues if i["type"] in ("inconsistency", "expiry")]
     consistency_score = 1.0 if not inconsistency_issues else max(0.0, 1 - 0.5 * len(inconsistency_issues))
 
-    # Applicant profile completeness
+    # Applicant profile contributes only once document evidence exists.
     profile_score = profile_completeness()
 
     weighted = (
