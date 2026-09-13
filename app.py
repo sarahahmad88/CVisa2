@@ -374,6 +374,9 @@ def inject_style():
         <style>
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
+
+        /* Keep Streamlit's header hidden on desktop, but restore it on mobile
+           so the native sidebar expand/collapse control remains available. */
         header {visibility: hidden;}
 
         .block-container {padding-top: 2rem; max-width: 1100px;}
@@ -456,6 +459,20 @@ def inject_style():
             margin-bottom: 0.1rem;
         }
         @media (max-width: 768px) {
+            /* Mobile needs Streamlit's native sidebar toggle in the header.
+               The sidebar itself stays collapsible/expandable as intended. */
+            header,
+            header[data-testid="stHeader"] {
+                visibility: visible !important;
+                background: transparent !important;
+            }
+
+            [data-testid="stSidebarCollapsedControl"] {
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+
             .block-container {
                 padding-top: 1rem !important;
                 padding-left: 1rem !important;
