@@ -375,9 +375,20 @@ def inject_style():
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
 
-        /* Keep Streamlit's header hidden on desktop, but restore it on mobile
-           so the native sidebar expand/collapse control remains available. */
+        /* Keep Streamlit's chrome hidden, but always expose the native
+           sidebar minimize/maximize controls on desktop and mobile. */
         header {visibility: hidden;}
+
+        [data-testid="stSidebarCollapsedControl"],
+        [data-testid="stSidebarCollapseButton"] {
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+
+        [data-testid="stSidebarCollapsedControl"] {
+            display: flex !important;
+        }
 
         .block-container {padding-top: 2rem; max-width: 1100px;}
 
