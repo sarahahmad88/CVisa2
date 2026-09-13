@@ -1,0 +1,14 @@
+# Use the CPU-only PyTorch wheels so the build stays small and fast on
+# Streamlit Community Cloud (no GPU is available or needed there).
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+streamlit>=1.36
+PyMuPDF>=1.24
+faiss-cpu>=1.8
+sentence-transformers>=2.7
+torch>=2.2
+groq>=0.9
+numpy>=1.26
+
+pytesseract>=0.3.13
+Pillow>=10.3
