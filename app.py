@@ -129,6 +129,167 @@ BASELINE_CHECKLIST = [
     {"id": "tuition_proof", "category": "Academic", "label": "Proof of tuition fee payment (if applicable)", "mandatory": False, "visa": "Student Visa"},
 ]
 
+# Each upload type has its own extraction schema.  This prevents the UI from
+# asking irrelevant questions (for example, a passport-size photo has no
+# expiry date or passport number to extract).
+DOCUMENT_EXTRACTION_PROFILES = {
+    "passport": {
+        "name": "Passport",
+        "fields": {
+            "full_name": "Full name",
+            "id_or_passport_number": "Passport number",
+            "issue_date": "Passport issue date",
+            "expiry_date": "Passport expiry date",
+            "issuer_or_institution": "Issuing authority / country",
+        },
+        "hint": "Extract the passport holder's name, passport number, issue date, expiry date, and issuing authority/country.",
+    },
+    "photos": {
+        "name": "Passport-size photograph",
+        "fields": {},
+        "skip_ai": True,
+        "review_note": (
+            "Photo received. A passport-size photograph does not have an expiry date, "
+            "passport number, issue date, or financial amount to extract. Please visually "
+            "confirm that the uploaded image is the correct applicant photo, recent, clear, "
+            "and suitable for the application."
+        ),
+    },
+    "cnic": {
+        "name": "CNIC",
+        "fields": {
+            "full_name": "Full name",
+            "id_or_passport_number": "CNIC number",
+            "issue_date": "CNIC issue date",
+            "expiry_date": "CNIC expiry date",
+            "issuer_or_institution": "Issuing authority",
+        },
+        "hint": "Extract the cardholder name, CNIC number, issue date, expiry date, and issuing authority if printed.",
+    },
+    "form": {
+        "name": "Visa application form",
+        "fields": {
+            "full_name": "Applicant name",
+            "id_or_passport_number": "Passport / ID number",
+        },
+        "hint": "Extract only the applicant name and passport/ID number from the completed application form.",
+    },
+    "purpose_student": {
+        "name": "Admission / enrolment letter",
+        "fields": {
+            "full_name": "Student name",
+            "issuer_or_institution": "University / institution",
+            "issue_date": "Letter / admission date",
+        },
+        "hint": "Extract the student's name, institution name, and the letter/admission date. Do not invent an expiry date.",
+    },
+    "purpose_tourist": {
+        "name": "Itinerary / invitation letter",
+        "fields": {
+            "full_name": "Traveller / invitee name",
+            "issuer_or_institution": "Host / issuer",
+            "issue_date": "Letter / itinerary date",
+        },
+        "hint": "Extract the traveller/invitee name, host or issuer, and any clear primary date. Do not treat travel end dates as document expiry dates.",
+    },
+    "flights": {
+        "name": "Flight reservation",
+        "fields": {
+            "full_name": "Passenger name",
+            "issuer_or_institution": "Airline / booking provider",
+            "issue_date": "Departure / primary travel date",
+        },
+        "hint": "Extract the passenger name, airline/booking provider, and primary departure date. Do not invent an expiry date.",
+    },
+    "financial": {
+        "name": "Financial evidence",
+        "fields": {
+            "full_name": "Account holder / sponsor name",
+            "key_amount": "Balance / available funds",
+            "issuer_or_institution": "Bank / sponsor / institution",
+            "issue_date": "Statement / letter date",
+        },
+        "hint": "Extract the account holder or sponsor name, important balance/available-funds amount, bank/institution, and statement/letter date.",
+    },
+    "salary_slips": {
+        "name": "Salary / income evidence",
+        "fields": {
+            "full_name": "Employee / income recipient",
+            "key_amount": "Salary / income amount",
+            "issuer_or_institution": "Employer / payer",
+            "issue_date": "Pay period / slip date",
+        },
+        "hint": "Extract the employee name, salary/income amount, employer/payer, and pay period or slip date.",
+    },
+    "accommodation": {
+        "name": "Accommodation evidence",
+        "fields": {
+            "full_name": "Guest / tenant name",
+            "issuer_or_institution": "Hotel / host / landlord",
+            "issue_date": "Check-in / start date",
+            "expiry_date": "Check-out / end date",
+        },
+        "hint": "Extract the guest/tenant name, hotel/host/landlord, accommodation start date, and end date.",
+    },
+    "insurance": {
+        "name": "Travel / health insurance",
+        "fields": {
+            "full_name": "Insured person's name",
+            "key_amount": "Coverage amount",
+            "issuer_or_institution": "Insurance provider",
+            "issue_date": "Coverage start date",
+            "expiry_date": "Coverage end date",
+        },
+        "hint": "Extract the insured person's name, coverage amount, insurer, coverage start date, and coverage end date.",
+    },
+    "employer_letter": {
+        "name": "Employer / university letter",
+        "fields": {
+            "full_name": "Applicant / employee name",
+            "issuer_or_institution": "Employer / university",
+            "issue_date": "Letter date",
+        },
+        "hint": "Extract the applicant/employee name, employer or university, and letter date.",
+    },
+    "degree_certs": {
+        "name": "Degree certificate",
+        "fields": {
+            "full_name": "Graduate name",
+            "issuer_or_institution": "Awarding institution",
+            "issue_date": "Award / certificate date",
+        },
+        "hint": "Extract the graduate name, awarding institution, and award/certificate date.",
+    },
+    "transcripts": {
+        "name": "Academic transcript",
+        "fields": {
+            "full_name": "Student name",
+            "issuer_or_institution": "Institution",
+            "issue_date": "Transcript date",
+        },
+        "hint": "Extract the student name, institution, and transcript date if present.",
+    },
+    "tuition_proof": {
+        "name": "Tuition payment evidence",
+        "fields": {
+            "full_name": "Student / payer name",
+            "key_amount": "Tuition amount paid",
+            "issuer_or_institution": "Institution / payment provider",
+            "issue_date": "Payment date",
+        },
+        "hint": "Extract the student/payer name, tuition amount paid, institution/payment provider, and payment date.",
+    },
+}
+
+ALL_EXTRACTED_FIELDS = (
+    "full_name",
+    "id_or_passport_number",
+    "issue_date",
+    "expiry_date",
+    "key_amount",
+    "issuer_or_institution",
+)
+
 RAG_QUERIES = [
     "mandatory identity and passport requirements",
     "financial evidence and minimum funds requirement amount",
@@ -513,25 +674,53 @@ def gather_country_context(country: str, model, kb, max_chars: int = 4500):
 # ========================================================================
 # GROQ (LLM) LAYER
 # ========================================================================
-def get_groq_client():
+def _safe_error_text(exc) -> str:
+    """Return a useful error without accidentally exposing an API key."""
+    message = str(exc).strip() or exc.__class__.__name__
+    message = re.sub(r"gsk_[A-Za-z0-9_-]+", "gsk_***", message)
+    return message[:500]
+
+
+def get_groq_client_status():
+    """Return (client, error_message) so the UI can explain AI failures."""
+    if Groq is None:
+        return None, "The Groq Python package is not installed."
+
     api_key = None
     try:
         api_key = st.secrets.get("GROQ_API_KEY")
     except Exception:
         pass
     api_key = api_key or os.environ.get("GROQ_API_KEY")
-    if not api_key or Groq is None:
-        return None
+
+    if not api_key:
+        return None, (
+            "Groq API key is not configured. Add GROQ_API_KEY in Streamlit Secrets "
+            "or as an environment variable."
+        )
+
     try:
-        return Groq(api_key=api_key)
-    except Exception:
-        return None
+        return Groq(api_key=api_key), None
+    except Exception as exc:
+        return None, f"Groq client could not be initialized: {_safe_error_text(exc)}"
 
 
-def ask_groq(system_prompt: str, user_prompt: str, max_tokens: int = 900, temperature: float = 0.2):
-    client = get_groq_client()
+def get_groq_client():
+    client, _ = get_groq_client_status()
+    return client
+
+
+def ask_groq_detailed(
+    system_prompt: str,
+    user_prompt: str,
+    max_tokens: int = 900,
+    temperature: float = 0.2,
+):
+    """Return (response_text, error_message) instead of hiding Groq failures."""
+    client, setup_error = get_groq_client_status()
     if client is None:
-        return None
+        return None, setup_error
+
     try:
         resp = client.chat.completions.create(
             model=GROQ_MODEL,
@@ -550,9 +739,19 @@ def ask_groq(system_prompt: str, user_prompt: str, max_tokens: int = 900, temper
                 st.session_state["session_tokens"] = st.session_state.get("session_tokens", 0) + total
         except Exception:
             pass
-        return resp.choices[0].message.content
-    except Exception:
-        return None
+
+        content = resp.choices[0].message.content if resp.choices else None
+        if not content:
+            return None, "Groq returned an empty response."
+        return content, None
+    except Exception as exc:
+        return None, f"Groq request failed: {_safe_error_text(exc)}"
+
+
+def ask_groq(system_prompt: str, user_prompt: str, max_tokens: int = 900, temperature: float = 0.2):
+    """Compatibility wrapper for parts of the app that only need response text."""
+    text, _ = ask_groq_detailed(system_prompt, user_prompt, max_tokens, temperature)
+    return text
 
 
 def _extract_json_block(text: str):
@@ -600,25 +799,89 @@ def generate_verified_notes(country: str, visa_type: str, context: str):
 
 
 # ---- Document field extraction ----------------------------------------
-def extract_fields_with_llm(document_text: str, category: str):
-    system_prompt = (
-        "You extract structured fields from a visa applicant's supporting "
-        "document. Only use information literally present in the text; use "
-        "null for anything absent. Mask all but the last 4 characters of any "
-        "ID or passport number. Return strict JSON with these keys: "
-        "document_type, full_name, id_or_passport_number, issue_date, "
-        "expiry_date, key_amount, issuer_or_institution, notes."
-    )
-    user_prompt = f"Document category: {category}\n\nDocument text:\n{document_text[:6000]}"
-    raw = ask_groq(system_prompt, user_prompt, max_tokens=400)
-    parsed = _extract_json_block(raw)
-    if isinstance(parsed, dict):
-        return parsed
+def _document_profile(item_id: str, label: str = "Document"):
+    profile = DOCUMENT_EXTRACTION_PROFILES.get(item_id)
+    if profile:
+        return profile
     return {
-        "document_type": category, "full_name": None, "id_or_passport_number": None,
-        "issue_date": None, "expiry_date": None, "key_amount": None,
-        "issuer_or_institution": None, "notes": "Automatic extraction unavailable; please fill in manually.",
+        "name": label,
+        "fields": {
+            "full_name": "Full name",
+            "id_or_passport_number": "ID / passport number",
+            "issue_date": "Issue / document date",
+            "expiry_date": "Expiry / end date",
+            "key_amount": "Key amount",
+            "issuer_or_institution": "Issuer / institution",
+        },
+        "hint": "Extract only fields that are clearly present in the document.",
     }
+
+
+def _empty_extraction(document_type: str, notes: str | None = None):
+    result = {"document_type": document_type}
+    for key in ALL_EXTRACTED_FIELDS:
+        result[key] = None
+    result["notes"] = notes
+    return result
+
+
+def extract_fields_with_llm(document_text: str, item_id: str, document_label: str):
+    """Extract only fields relevant to this checklist item.
+
+    Returns (extracted_dict, status_dict).  status_dict has a status of
+    'success', 'error', or 'not_needed' and a user-facing message.
+    """
+    profile = _document_profile(item_id, document_label)
+
+    if profile.get("skip_ai"):
+        return (
+            _empty_extraction(profile.get("name", document_label), profile.get("review_note")),
+            {
+                "status": "not_needed",
+                "message": profile.get("review_note") or "No AI extraction is required for this document type.",
+            },
+        )
+
+    relevant_fields = list(profile.get("fields", {}).keys())
+    return_keys = ["document_type", *relevant_fields, "notes"]
+    system_prompt = (
+        "You extract structured fields from a visa applicant's supporting document. "
+        "Only use information literally present in the supplied text. Use null when a "
+        "requested field is absent. Never infer a date or amount. Mask all but the last "
+        "4 characters of any ID or passport number. "
+        f"This document is a {profile.get('name', document_label)}. "
+        f"Document-specific instruction: {profile.get('hint', '')} "
+        "Return strict JSON only. Do not include fields that were not requested. "
+        f"Return exactly these keys: {', '.join(return_keys)}."
+    )
+    user_prompt = (
+        f"Checklist item: {document_label}\n"
+        f"Document type: {profile.get('name', document_label)}\n\n"
+        f"Document text:\n{document_text[:6000]}"
+    )
+
+    raw, groq_error = ask_groq_detailed(system_prompt, user_prompt, max_tokens=450)
+    if groq_error:
+        return (
+            _empty_extraction(profile.get("name", document_label)),
+            {"status": "error", "message": groq_error},
+        )
+
+    parsed = _extract_json_block(raw)
+    if not isinstance(parsed, dict):
+        return (
+            _empty_extraction(profile.get("name", document_label)),
+            {
+                "status": "error",
+                "message": "Groq responded, but the response was not valid structured JSON.",
+            },
+        )
+
+    extracted = _empty_extraction(profile.get("name", document_label))
+    for key in relevant_fields:
+        extracted[key] = parsed.get(key)
+    extracted["notes"] = parsed.get("notes")
+    return extracted, {"status": "success", "message": "AI field extraction completed."}
 
 
 # ---- Next-step guidance -------------------------------------------------
@@ -701,12 +964,21 @@ def compute_issues():
                 "item_id": item["id"],
             })
 
-    # 2. Unconfirmed extractions
+    # 2. Unconfirmed document reviews
     for doc in st.session_state.documents.values():
         if not doc.get("confirmed"):
+            if doc.get("category") == "photos":
+                label = f"Confirm passport photo: {doc['name']}"
+                detail = (
+                    "The uploaded passport-size photo needs visual confirmation. "
+                    "No expiry date or ID extraction is expected for this document type."
+                )
+            else:
+                label = f"Confirm extracted data: {doc['name']}"
+                detail = "The extracted details for this document have not been reviewed and confirmed yet."
             issues.append({
-                "label": f"Confirm extracted data: {doc['name']}",
-                "detail": "AI-extracted details for this document have not been reviewed and confirmed yet.",
+                "label": label,
+                "detail": detail,
                 "severity": "Review Recommended",
                 "type": "unconfirmed",
                 "doc_id": doc["id"],
@@ -785,7 +1057,7 @@ def compute_score():
 
     components = {
         "Mandatory Requirements": round(mandatory_completion * 100),
-        "Confirmed Extraction": round(confirmed_extraction * 100),
+        "Confirmed Document Review": round(confirmed_extraction * 100),
         "Consistency": round(consistency_score * 100),
         "Applicant Profile": round(profile_score * 100),
     }
@@ -917,12 +1189,15 @@ def render_checklist():
 
 
 def render_upload():
-    page_header("Upload Documents", "Upload a PDF, text file, scan, or phone photo. Viza Pilot reads both digital text and image-based documents automatically.")
+    page_header(
+        "Upload Documents",
+        "Upload a PDF, text file, scan, or phone photo. Viza Pilot uses a document-specific reading and extraction flow for each checklist item.",
+    )
 
     if not _tesseract_available():
         st.warning(
-            "Scanned PDFs and photos require Tesseract OCR on the server. "
-            "Digital PDFs and text files will still work."
+            "Scanned PDFs and photographed text documents require Tesseract OCR on the server. "
+            "Digital PDFs and text files will still work. Passport-size photos do not require OCR."
         )
 
     items = active_checklist()
@@ -931,53 +1206,131 @@ def render_upload():
         return
 
     for item in items:
+        profile = _document_profile(item["id"], item["label"])
         with st.expander(f"{item['label']}  {'(Mandatory)' if item['mandatory'] else '(Recommended)'}", expanded=False):
+            if item["id"] == "photos":
+                st.caption(
+                    "For a passport-size photograph, Viza Pilot only records the upload for visual confirmation. "
+                    "It will not ask for an expiry date, issue date, passport number, or financial amount."
+                )
+            else:
+                expected = ", ".join(profile.get("fields", {}).values())
+                if expected:
+                    st.caption(f"Viza Pilot will look for: {expected}.")
+
             uploaded = st.file_uploader(
                 "Upload file", type=["pdf", "txt", "png", "jpg", "jpeg"],
                 key=f"upload_{item['id']}", label_visibility="collapsed",
             )
+
             if uploaded is not None:
                 doc_id = f"{item['id']}_{uploaded.name}"
                 if doc_id not in st.session_state.documents:
-                    with st.spinner("Reading document..."):
-                        text, read_method, read_error = _extract_uploaded_text(uploaded)
-
-                    extracted = {}
-                    if text.strip():
-                        with st.spinner("Extracting key details..."):
-                            extracted = extract_fields_with_llm(text, item["label"])
-                        if read_method == "OCR":
-                            extracted["notes"] = (extracted.get("notes") or "") + " Read from the uploaded image."
-                        elif read_method == "OCR + PDF text":
-                            extracted["notes"] = (extracted.get("notes") or "") + " Scanned PDF page(s) were read automatically."
+                    # Passport-size photos are evidence to review visually, not text documents.
+                    if profile.get("skip_ai"):
+                        text = ""
+                        read_method = "Visual upload"
+                        read_error = None
+                        extracted, ai_info = extract_fields_with_llm(
+                            "", item["id"], item["label"]
+                        )
                     else:
-                        extracted = {
-                            "document_type": item["label"], "full_name": None,
-                            "id_or_passport_number": None, "issue_date": None,
-                            "expiry_date": None, "key_amount": None,
-                            "issuer_or_institution": None,
-                            "notes": read_error or "No readable text found — please enter details manually on the Review tab.",
-                        }
+                        with st.spinner("Reading document..."):
+                            text, read_method, read_error = _extract_uploaded_text(uploaded)
+
+                        if text.strip():
+                            with st.spinner("Extracting document-specific details..."):
+                                extracted, ai_info = extract_fields_with_llm(
+                                    text, item["id"], item["label"]
+                                )
+                        else:
+                            extracted = _empty_extraction(profile.get("name", item["label"]))
+                            ai_info = {
+                                "status": "not_run",
+                                "message": (
+                                    "AI extraction was not run because no readable document text was available."
+                                ),
+                            }
 
                     st.session_state.documents[doc_id] = {
-                        "id": doc_id, "name": uploaded.name, "category": item["id"],
-                        "label": item["label"], "text": text, "extracted": extracted,
-                        "read_method": read_method, "confirmed": False,
+                        "id": doc_id,
+                        "name": uploaded.name,
+                        "category": item["id"],
+                        "label": item["label"],
+                        "text": text,
+                        "extracted": extracted,
+                        "read_method": read_method,
+                        "read_error": read_error,
+                        "read_char_count": len(text.strip()),
+                        "ai_status": ai_info.get("status"),
+                        "ai_message": ai_info.get("message"),
+                        "confirmed": False,
                     }
-                st.success(f"Uploaded: {uploaded.name} — go to **Review Extracted Data** to confirm details.")
+
+                doc = st.session_state.documents[doc_id]
+                ai_status = doc.get("ai_status")
+                read_error = doc.get("read_error")
+                char_count = doc.get("read_char_count", len((doc.get("text") or "").strip()))
+                read_method = doc.get("read_method", "Unknown")
+
+                if item["id"] == "photos":
+                    st.success(
+                        f"Uploaded: {uploaded.name}. No date or ID extraction is required for a passport-size photo. "
+                        "Please visually confirm the photo on the Review tab."
+                    )
+                elif read_error:
+                    st.error(f"{item['label']}: the file was uploaded, but automatic reading failed. {read_error}")
+                elif char_count > 0 and ai_status == "success":
+                    st.success(
+                        f"{item['label']}: read successfully via {read_method} ({char_count:,} characters) "
+                        "and the relevant fields were extracted. Please review them before confirming."
+                    )
+                elif char_count > 0 and ai_status == "error":
+                    st.warning(
+                        f"{item['label']}: the document text was read successfully via {read_method} "
+                        f"({char_count:,} characters), but AI field extraction failed. "
+                        f"{doc.get('ai_message') or 'No further error detail was returned.'}"
+                    )
+                    with st.expander("Show text read from this document"):
+                        st.text_area(
+                            "OCR / extracted text",
+                            value=(doc.get("text") or "")[:12000],
+                            height=220,
+                            disabled=True,
+                            key=f"upload_text_{doc_id}",
+                        )
+                elif char_count > 0:
+                    st.info(
+                        f"{item['label']}: document text was read via {read_method} ({char_count:,} characters). "
+                        "Please review the available details."
+                    )
+                else:
+                    st.warning(
+                        f"{item['label']}: the file was uploaded, but no readable text was detected. "
+                        "Please review the document manually."
+                    )
 
             existing = docs_for_item(item["id"])
             for doc in existing:
                 badge = "vp-badge-ok" if doc["confirmed"] else "vp-badge-warn"
                 label = "Confirmed" if doc["confirmed"] else "Needs your review"
-                st.markdown(f"<span class='{badge}'>{label}</span> &nbsp; {doc['name']}", unsafe_allow_html=True)
+                st.markdown(
+                    f"<span class='{badge}'>{label}</span> &nbsp; {doc['name']}",
+                    unsafe_allow_html=True,
+                )
 
-    st.button("Continue to Review Extracted Data", type="primary",
-              on_click=lambda: st.session_state.update(page="Review Extracted Data"))
+    st.button(
+        "Continue to Review Extracted Data",
+        type="primary",
+        on_click=lambda: st.session_state.update(page="Review Extracted Data"),
+    )
 
 
 def render_review():
-    page_header("Review Extracted Data", "Viza Pilot reads each document automatically — please confirm the details are correct.")
+    page_header(
+        "Review Extracted Data",
+        "Each document shows only the fields that are relevant to that document type. Confirm or correct them before continuing.",
+    )
 
     docs = list(st.session_state.documents.values())
     if not docs:
@@ -986,36 +1339,90 @@ def render_review():
 
     for doc in docs:
         with st.container():
+            profile = _document_profile(doc.get("category", ""), doc.get("label", "Document"))
+            fields = profile.get("fields", {})
+            extracted = doc.get("extracted") or _empty_extraction(profile.get("name", doc.get("label", "Document")))
+
             st.markdown(f"#### {doc['label']}")
             st.caption(doc["name"])
-            badge = "vp-badge-ok" if doc["confirmed"] else "vp-badge-warn"
-            label = "Confirmed" if doc["confirmed"] else "AI Extracted — Please Confirm"
-            st.markdown(f"<span class='{badge}'>{label}</span>", unsafe_allow_html=True)
+
+            if doc.get("confirmed"):
+                badge_text = "Confirmed"
+                badge = "vp-badge-ok"
+            elif profile.get("skip_ai"):
+                badge_text = "Visual confirmation required"
+                badge = "vp-badge-warn"
+            else:
+                badge_text = "Extracted — Please Confirm"
+                badge = "vp-badge-warn"
+            st.markdown(f"<span class='{badge}'>{badge_text}</span>", unsafe_allow_html=True)
             st.write("")
 
-            extracted = doc.get("extracted") or {}
-            col1, col2 = st.columns(2)
-            with col1:
-                full_name = st.text_input("Full name", value=extracted.get("full_name") or "", key=f"name_{doc['id']}")
-                id_number = st.text_input("ID / passport number", value=extracted.get("id_or_passport_number") or "", key=f"id_{doc['id']}")
-                issue_date = st.text_input("Issue date", value=extracted.get("issue_date") or "", key=f"issue_{doc['id']}")
-            with col2:
-                expiry_date = st.text_input("Expiry date (YYYY-MM-DD if known)", value=extracted.get("expiry_date") or "", key=f"expiry_{doc['id']}")
-                key_amount = st.text_input("Key amount (if financial document)", value=extracted.get("key_amount") or "", key=f"amount_{doc['id']}")
-                issuer = st.text_input("Issuer / institution", value=extracted.get("issuer_or_institution") or "", key=f"issuer_{doc['id']}")
+            read_method = doc.get("read_method")
+            read_error = doc.get("read_error")
+            text = doc.get("text") or ""
+            char_count = doc.get("read_char_count", len(text.strip()))
+            ai_status = doc.get("ai_status")
+            ai_message = doc.get("ai_message")
 
-            if extracted.get("notes"):
-                st.caption(f"Note: {extracted['notes']}")
+            if profile.get("skip_ai"):
+                st.info(profile.get("review_note") or "This document requires visual confirmation only.")
+            else:
+                if read_error:
+                    st.error(f"Document reading failed: {read_error}")
+                elif char_count:
+                    st.success(f"Document text read via {read_method or 'automatic reading'}: {char_count:,} characters detected.")
+                else:
+                    st.warning("No readable text was detected in this document.")
+
+                if ai_status == "success":
+                    st.success("Document-specific AI field extraction completed.")
+                elif ai_status == "error":
+                    st.warning(
+                        "The document was read, but structured AI extraction failed. "
+                        f"{ai_message or 'No further error detail was returned.'}"
+                    )
+                elif ai_status == "not_run" and char_count == 0:
+                    st.info("AI extraction was not run because there was no readable text to send for extraction.")
+
+                if text.strip():
+                    with st.expander("Show text read from the document"):
+                        st.text_area(
+                            "OCR / extracted text",
+                            value=text[:12000],
+                            height=220,
+                            disabled=True,
+                            key=f"review_text_{doc['id']}",
+                        )
+
+            edited_values = {}
+            if fields:
+                field_items = list(fields.items())
+                cols = st.columns(2)
+                for idx, (field_key, field_label) in enumerate(field_items):
+                    with cols[idx % 2]:
+                        edited_values[field_key] = st.text_input(
+                            field_label,
+                            value=extracted.get(field_key) or "",
+                            key=f"field_{field_key}_{doc['id']}",
+                        )
+            else:
+                st.caption("No text fields are required for this upload type.")
+
+            if extracted.get("notes") and not profile.get("skip_ai"):
+                st.caption(f"Document note: {extracted['notes']}")
 
             c1, c2 = st.columns(2)
             with c1:
-                if st.button("Confirm this is correct", key=f"confirm_{doc['id']}", type="primary"):
-                    doc["extracted"] = {
-                        "document_type": doc["label"], "full_name": full_name,
-                        "id_or_passport_number": id_number, "issue_date": issue_date,
-                        "expiry_date": expiry_date, "key_amount": key_amount,
-                        "issuer_or_institution": issuer, "notes": "",
-                    }
+                confirm_label = (
+                    "Confirm this photo" if profile.get("skip_ai") else "Confirm these details"
+                )
+                if st.button(confirm_label, key=f"confirm_{doc['id']}", type="primary"):
+                    confirmed = _empty_extraction(profile.get("name", doc.get("label", "Document")))
+                    for field_key in fields:
+                        confirmed[field_key] = edited_values.get(field_key, "") or None
+                    confirmed["notes"] = extracted.get("notes")
+                    doc["extracted"] = confirmed
                     doc["confirmed"] = True
                     st.rerun()
             with c2:
@@ -1024,8 +1431,11 @@ def render_review():
                     st.rerun()
             st.divider()
 
-    st.button("Continue to Issue Center", type="primary",
-              on_click=lambda: st.session_state.update(page="Issue Center"))
+    st.button(
+        "Continue to Issue Center",
+        type="primary",
+        on_click=lambda: st.session_state.update(page="Issue Center"),
+    )
 
 
 def render_issues():
