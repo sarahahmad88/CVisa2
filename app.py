@@ -67,7 +67,7 @@ st.set_page_config(
     page_title="Viza Pilot",
     page_icon="🧭",
     layout="wide",
-    initial_sidebar_state="auto",
+    initial_sidebar_state="expanded",
 )
 
 KNOWLEDGE_DIR = os.path.join(os.path.dirname(__file__), "knowledge")
@@ -375,36 +375,14 @@ def inject_style():
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
 
-        /* Keep Streamlit's chrome hidden, but always expose the native
-           sidebar minimize/maximize controls on desktop and mobile. */
-        header {visibility: hidden;}
-
-        [data-testid="stSidebarCollapsedControl"],
-        [data-testid="stSidebarCollapseButton"] {
-            visibility: visible !important;
-            opacity: 1 !important;
-            pointer-events: auto !important;
-        }
-
-        [data-testid="stSidebarCollapsedControl"] {
-            display: flex !important;
-        }
+        /* Keep Streamlit's native header and sidebar controls untouched.
+           This preserves the built-in expand/collapse button on desktop,
+           laptop, tablet, and mobile. */
 
         .block-container {padding-top: 2rem; max-width: 1100px;}
 
         section[data-testid="stSidebar"] {
             background-color: #10141c;
-        }
-
-        /* Let Streamlit control sidebar open/close state.
-           This prevents the navigation panel from sitting on top of the
-           main content on phones and small tablets. */
-        @media (min-width: 769px) {
-            section[data-testid="stSidebar"] {
-                min-width: 280px !important;
-                width: 280px !important;
-                max-width: 280px !important;
-            }
         }
         section[data-testid="stSidebar"] * {
             color: #e8ebf0 !important;
@@ -470,19 +448,7 @@ def inject_style():
             margin-bottom: 0.1rem;
         }
         @media (max-width: 768px) {
-            /* Mobile needs Streamlit's native sidebar toggle in the header.
-               The sidebar itself stays collapsible/expandable as intended. */
-            header,
-            header[data-testid="stHeader"] {
-                visibility: visible !important;
-                background: transparent !important;
-            }
-
-            [data-testid="stSidebarCollapsedControl"] {
-                display: flex !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-            }
+            /* Streamlit's native sidebar controls remain available on mobile. */
 
             .block-container {
                 padding-top: 1rem !important;
