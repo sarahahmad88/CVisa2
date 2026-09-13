@@ -72,7 +72,8 @@ st.set_page_config(
 
 KNOWLEDGE_DIR = os.path.join(os.path.dirname(__file__), "knowledge")
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_FALLBACK_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 OCR_DPI = 220
 OCR_MIN_NATIVE_CHARS = 40
 OCR_LANG = os.getenv("TESSERACT_LANG", "eng")
@@ -721,31 +722,64 @@ def ask_groq_detailed(
     if client is None:
         return None, setup_error
 
-    try:
-        resp = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-        try:
-            usage = getattr(resp, "usage", None)
-            total = getattr(usage, "total_tokens", None) if usage else None
-            if total:
-                add_tokens(total)
-                st.session_state["session_tokens"] = st.session_state.get("session_tokens", 0) + total
-        except Exception:
-            pass
+    # Groq retired llama-3.3-70b-versatile for free/developer-tier usage in
+    # August 2026. Use a current production model and automatically fall back
+    # if a configured model is unavailable for this account.
+    model_candidates = []
+    for model_id in [GROQ_MODEL, *GROQ_FALLBACK_MODELS]:
+        if model_id and model_id not in model_candidates:
+            model_candidates.append(model_id)
 
-        content = resp.choices[0].message.content if resp.choices else None
-        if not content:
-            return None, "Groq returned an empty response."
-        return content, None
-    except Exception as exc:
-        return None, f"Groq request failed: {_safe_error_text(exc)}"
+    last_error = None
+    for model_id in model_candidates:
+        try:
+            resp = client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            try:
+                usage = getattr(resp, "usage", None)
+                total = getattr(usage, "total_tokens", None) if usage else None
+                if total:
+                    add_tokens(total)
+                    st.session_state["session_tokens"] = st.session_state.get("session_tokens", 0) + total
+            except Exception:
+                pass
+
+            content = resp.choices[0].message.content if resp.choices else None
+            if not content:
+                return None, f"Groq model {model_id} returned an empty response."
+
+            # Keep the model used available for user-facing diagnostics/debugging.
+            st.session_state["groq_model_used"] = model_id
+            return content, None
+        except Exception as exc:
+            err_text = _safe_error_text(exc)
+            last_error = f"Groq request failed with model {model_id}: {err_text}"
+            err_lower = err_text.lower()
+
+            # Only try another model for a model availability/access problem.
+            # Authentication, quota, malformed requests, etc. should be shown
+            # immediately instead of being hidden behind repeated retries.
+            model_unavailable = any(
+                marker in err_lower
+                for marker in (
+                    "model_not_found",
+                    "does not exist",
+                    "do not have access",
+                    "don't have access",
+                    "not available",
+                )
+            )
+            if not model_unavailable:
+                return None, last_error
+
+    return None, last_error or "No configured Groq model was available for this account."
 
 
 def ask_groq(system_prompt: str, user_prompt: str, max_tokens: int = 900, temperature: float = 0.2):
