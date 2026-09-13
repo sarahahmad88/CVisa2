@@ -67,7 +67,7 @@ st.set_page_config(
     page_title="Viza Pilot",
     page_icon="🧭",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 KNOWLEDGE_DIR = os.path.join(os.path.dirname(__file__), "knowledge")
@@ -380,23 +380,17 @@ def inject_style():
 
         section[data-testid="stSidebar"] {
             background-color: #10141c;
-            min-width: 280px !important;
-            width: 280px !important;
-            max-width: 280px !important;
-            transform: translateX(0) !important;
-            visibility: visible !important;
-            display: block !important;
         }
-        /* Keep the left navigation permanently open. */
-        section[data-testid="stSidebar"][aria-expanded="false"] {
-            margin-left: 0 !important;
-            transform: translateX(0) !important;
-        }
-        [data-testid="stSidebarCollapseButton"],
-        [data-testid="stSidebarCollapsedControl"],
-        [data-testid="collapsedControl"],
-        section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] button {
-            display: none !important;
+
+        /* Let Streamlit control sidebar open/close state.
+           This prevents the navigation panel from sitting on top of the
+           main content on phones and small tablets. */
+        @media (min-width: 769px) {
+            section[data-testid="stSidebar"] {
+                min-width: 280px !important;
+                width: 280px !important;
+                max-width: 280px !important;
+            }
         }
         section[data-testid="stSidebar"] * {
             color: #e8ebf0 !important;
@@ -461,8 +455,26 @@ def inject_style():
             font-weight: 600;
             margin-bottom: 0.1rem;
         }
-        @media (max-width: 640px) {
-            div[class*="st-key-vp_feedback_widget"] { width: 190px; }
+        @media (max-width: 768px) {
+            .block-container {
+                padding-top: 1rem !important;
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+                max-width: 100% !important;
+            }
+
+            /* Keep the feedback card compact so it does not cover inputs. */
+            div[class*="st-key-vp_feedback_widget"] {
+                position: static !important;
+                width: 100% !important;
+                margin-top: 1rem !important;
+                box-sizing: border-box !important;
+            }
+
+            /* Stack horizontal radio controls on narrow screens. */
+            div[data-testid="stRadio"] > div {
+                flex-wrap: wrap !important;
+            }
         }
         </style>
         """,
@@ -965,7 +977,10 @@ def generate_copilot_summary(profile, score, blocking, review_items):
         "You are a calm, encouraging visa-preparation assistant. Write 2-3 "
         "short sentences summarizing the applicant's current readiness and "
         "the single most important thing to do next. Do not invent visa "
-        "rules. Do not guarantee approval outcomes."
+        "rules. Do not guarantee approval outcomes. If readiness_score is below 85, "
+        "do not say the applicant is in great shape, ready, submission-ready, or fully prepared. "
+        "If readiness_score is 85 or higher, you may use positive readiness language while still "
+        "avoiding any guarantee of visa approval."
     )
     user_prompt = json.dumps({
         "country": profile.get("country"),
@@ -1615,9 +1630,14 @@ def render_next_steps():
     for issue in review:
         actions.append(("Medium", issue["label"], "~3 min"))
 
-    if not actions:
+    # Readiness message is controlled by the total score, not merely by
+    # whether the issue list happens to be empty.
+    if overall >= 85:
         st.success("You're in great shape. Review your documents once more, then proceed with your official application.")
     else:
+        st.warning("Some visa application requirements still need to be fulfilled")
+
+    if actions:
         st.markdown("#### Priority actions")
         for priority, label, est in actions:
             tag = "vp-badge-risk" if priority == "High" else "vp-badge-warn"
