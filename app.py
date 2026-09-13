@@ -716,15 +716,20 @@ def ask_groq_detailed(
     user_prompt: str,
     max_tokens: int = 900,
     temperature: float = 0.2,
+    json_mode: bool = False,
 ):
-    """Return (response_text, error_message) instead of hiding Groq failures."""
+    """Return (response_text, error_message) instead of hiding Groq failures.
+
+    GPT-OSS models can spend much of a small completion budget on internal
+    reasoning and then return an empty ``message.content``. For extraction
+    work we explicitly use low reasoning, exclude reasoning from the response,
+    and give the model a safer completion budget. If a model still returns no
+    final content, the next configured fallback model is tried automatically.
+    """
     client, setup_error = get_groq_client_status()
     if client is None:
         return None, setup_error
 
-    # Groq retired llama-3.3-70b-versatile for free/developer-tier usage in
-    # August 2026. Use a current production model and automatically fall back
-    # if a configured model is unavailable for this account.
     model_candidates = []
     for model_id in [GROQ_MODEL, *GROQ_FALLBACK_MODELS]:
         if model_id and model_id not in model_candidates:
@@ -733,15 +738,32 @@ def ask_groq_detailed(
     last_error = None
     for model_id in model_candidates:
         try:
-            resp = client.chat.completions.create(
-                model=model_id,
-                messages=[
+            request_kwargs = {
+                "model": model_id,
+                "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
+                "temperature": temperature,
+            }
+
+            # max_tokens is deprecated by Groq; max_completion_tokens is the
+            # supported parameter. GPT-OSS may otherwise consume a very small
+            # budget during reasoning and leave no final answer.
+            if model_id.startswith("openai/gpt-oss-"):
+                request_kwargs["max_completion_tokens"] = max(max_tokens, 1200)
+                request_kwargs["reasoning_effort"] = "low"
+                request_kwargs["include_reasoning"] = False
+            else:
+                request_kwargs["max_completion_tokens"] = max_tokens
+
+            # JSON mode is used only where the caller expects structured data.
+            # It makes passport/CNIC/bank/letter extraction much more reliable.
+            if json_mode:
+                request_kwargs["response_format"] = {"type": "json_object"}
+
+            resp = client.chat.completions.create(**request_kwargs)
+
             try:
                 usage = getattr(resp, "usage", None)
                 total = getattr(usage, "total_tokens", None) if usage else None
@@ -751,22 +773,30 @@ def ask_groq_detailed(
             except Exception:
                 pass
 
-            content = resp.choices[0].message.content if resp.choices else None
-            if not content:
-                return None, f"Groq model {model_id} returned an empty response."
+            message = resp.choices[0].message if resp.choices else None
+            content = getattr(message, "content", None) if message else None
+            if content and str(content).strip():
+                st.session_state["groq_model_used"] = model_id
+                return str(content).strip(), None
 
-            # Keep the model used available for user-facing diagnostics/debugging.
-            st.session_state["groq_model_used"] = model_id
-            return content, None
+            # Do not stop on an empty final answer: try the fallback model.
+            finish_reason = getattr(resp.choices[0], "finish_reason", None) if resp.choices else None
+            last_error = (
+                f"Groq model {model_id} returned no final answer"
+                + (f" (finish reason: {finish_reason})" if finish_reason else "")
+                + ". Trying the fallback model."
+            )
+            continue
+
         except Exception as exc:
             err_text = _safe_error_text(exc)
             last_error = f"Groq request failed with model {model_id}: {err_text}"
             err_lower = err_text.lower()
 
-            # Only try another model for a model availability/access problem.
-            # Authentication, quota, malformed requests, etc. should be shown
-            # immediately instead of being hidden behind repeated retries.
-            model_unavailable = any(
+            # Try another model for model availability/access errors and for
+            # transient output-generation problems. Authentication/quota and
+            # malformed-request errors should remain visible to the user.
+            retryable = any(
                 marker in err_lower
                 for marker in (
                     "model_not_found",
@@ -774,19 +804,28 @@ def ask_groq_detailed(
                     "do not have access",
                     "don't have access",
                     "not available",
+                    "empty response",
+                    "no final answer",
                 )
             )
-            if not model_unavailable:
+            if not retryable:
                 return None, last_error
 
-    return None, last_error or "No configured Groq model was available for this account."
+    return None, last_error or "No configured Groq model returned a usable response."
 
 
-def ask_groq(system_prompt: str, user_prompt: str, max_tokens: int = 900, temperature: float = 0.2):
+def ask_groq(
+    system_prompt: str,
+    user_prompt: str,
+    max_tokens: int = 900,
+    temperature: float = 0.2,
+    json_mode: bool = False,
+):
     """Compatibility wrapper for parts of the app that only need response text."""
-    text, _ = ask_groq_detailed(system_prompt, user_prompt, max_tokens, temperature)
+    text, _ = ask_groq_detailed(
+        system_prompt, user_prompt, max_tokens, temperature, json_mode=json_mode
+    )
     return text
-
 
 def _extract_json_block(text: str):
     if not text:
@@ -827,7 +866,7 @@ def generate_verified_notes(country: str, visa_type: str, context: str):
         f"Destination: {country}\nVisa type: {visa_type}\n\n"
         f"Official guide excerpts:\n{context}"
     )
-    raw = ask_groq(system_prompt, user_prompt, max_tokens=700)
+    raw = ask_groq(system_prompt, user_prompt, max_tokens=700, json_mode=True)
     parsed = _extract_json_block(raw)
     return parsed if isinstance(parsed, dict) else {}
 
@@ -894,7 +933,9 @@ def extract_fields_with_llm(document_text: str, item_id: str, document_label: st
         f"Document text:\n{document_text[:6000]}"
     )
 
-    raw, groq_error = ask_groq_detailed(system_prompt, user_prompt, max_tokens=450)
+    raw, groq_error = ask_groq_detailed(
+        system_prompt, user_prompt, max_tokens=700, json_mode=True
+    )
     if groq_error:
         return (
             _empty_extraction(profile.get("name", document_label)),
